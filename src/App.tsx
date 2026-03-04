@@ -2,25 +2,26 @@ import { useState } from "react";
 import { generateScenarioPacket } from "./engine/generateScenario";
 import type { ScenarioPacket } from "./types/scenario";
 import { ScenarioView } from "./components/ScenarioView";
+import { LoadPacketModal } from "./components/LoadPacketModal";
 
-function downloadJson(packet: ScenarioPacket) {
-  const blob = new Blob([JSON.stringify(packet, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${packet.meta.id}.json`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
+// function downloadJson(packet: ScenarioPacket) {
+//   const blob = new Blob([JSON.stringify(packet, null, 2)], { type: "application/json" });
+//   const url = URL.createObjectURL(blob);
+//   const a = document.createElement("a");
+//   a.href = url;
+//   a.download = `${packet.meta.id}.json`;
+//   document.body.appendChild(a);
+//   a.click();
+//   a.remove();
+//   URL.revokeObjectURL(url);
+// }
 
 function buildNarrativePrompt(packet: ScenarioPacket): string {
   const lines = [
-    "You are generating narrative flavor for a wilderness first aid training scenario.",
+    "You are generating narrative flavor for an EMT training scenario.",
     "You will be given a JSON ScenarioPacket. That JSON is the source of truth.",
     "",
-    "Return ONLY valid JSON with this shape:",
+    "Return ONLY valid JSON file for download with this shape:",
     "{",
     '  "narrative": {',
     '    "opener": string,',
@@ -61,13 +62,12 @@ async function copyNarrativePrompt(packet: ScenarioPacket) {
 }
 
 export default function App() {
-  const [seed, setSeed] = useState<string>("");
   const [scenarioType, setScenarioType] = useState<"trauma" | "medical">("trauma");
   const [packet, setPacket] = useState<ScenarioPacket>(() => generateScenarioPacket({ scenarioType }));
+  const [isLoadModalOpen, setIsLoadModalOpen] = useState(false);
 
   const onGenerate = () => {
     const next = generateScenarioPacket({
-      seed: seed.trim() ? seed.trim() : undefined,
       scenarioType,
     });
     setPacket(next);
@@ -87,7 +87,6 @@ export default function App() {
             <select value={scenarioType} onChange={(e) => {
               setScenarioType(e.target.value as "trauma" | "medical");
               const next = generateScenarioPacket({
-                seed: seed.trim() ? seed.trim() : undefined,
                 scenarioType: e.target.value as "trauma" | "medical"
               });
               setPacket(next);
@@ -97,15 +96,16 @@ export default function App() {
             </select>
           </label>
           <label className="control">
-            <span>Seed (optional)</span>
+            {/* <span>Seed (optional)</span>
             <input
               value={seed}
               onChange={(e) => setSeed(e.target.value)}
               placeholder="e.g. 1234 or 'pelvic'"
-            />
+            /> */}
           </label>
           <button onClick={onGenerate}>Generate Scenario</button>
-          <button onClick={() => downloadJson(packet)}>Export JSON</button>
+          <button onClick={() => setIsLoadModalOpen(true)}>Load Packet</button>
+          {/* <button onClick={() => downloadJson(packet)}>Export JSON</button> */}
           <button onClick={() => copyNarrativePrompt(packet)}>Copy LLM Prompt</button>
           <button onClick={() => window.print()}>Print</button>
         </div>
@@ -114,6 +114,15 @@ export default function App() {
       <main className="content">
         <ScenarioView packet={packet} />
       </main>
+
+      <LoadPacketModal
+        isOpen={isLoadModalOpen}
+        onLoad={(loadedPacket) => {
+          setPacket(loadedPacket);
+          setIsLoadModalOpen(false);
+        }}
+        onClose={() => setIsLoadModalOpen(false)}
+      />
 
       <footer className="footer no-print">
         <small className="muted">
