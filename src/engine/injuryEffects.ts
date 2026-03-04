@@ -8,6 +8,7 @@ export type VitalsDelta = Partial<{
   pupils: WildernessVitals["pupils"];
   skin: WildernessVitals["skin"];
   lor: WildernessVitals["lor"];
+  bloodGlucose: number;
 }>;
 
 export type InjuryEffect = {

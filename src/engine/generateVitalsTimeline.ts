@@ -21,6 +21,9 @@ function applyDelta(base: WildernessVitals, delta: any): WildernessVitals {
   if (delta.pupils) next.pupils = delta.pupils;
   if (delta.skin) next.skin = delta.skin;
   if (delta.lor) next.lor = delta.lor;
+  if (typeof delta.bloodGlucose === "number" && next.bloodGlucose !== null && next.bloodGlucose !== undefined) {
+    next.bloodGlucose = clamp(next.bloodGlucose + delta.bloodGlucose, 30, 500);
+  }
 
   return next;
 }

@@ -19,6 +19,21 @@ function randomId(prefix: string): string {
   return `${prefix}_${hex}`;
 }
 
+// helpers for patient age
+function randomInRange(min: number, max: number, rng: Rng): number {
+  return Math.floor(rng() * (max - min + 1)) + min;
+}
+
+function estimateAge(type: string, rng: Rng): number {
+  if (type.includes("Pediatric")) return randomInRange(2, 12, rng);
+  if (type.includes("Elderly")) return randomInRange(65, 90, rng);
+  if (type.includes("Pregnant")) return randomInRange(18, 40, rng);
+  if (type.includes("Athletic")) return randomInRange(18, 35, rng);
+  if (type.includes("significant history")) return randomInRange(40, 80, rng);
+  // generic adult
+  return randomInRange(18, 64, rng);
+}
+
 function makeInjury(id: string, type: TraumaInjuryType | MedicalConditionType): Injury {
   const traumaEff = INJURY_EFFECTS[type as TraumaInjuryType];
   const medicalEff = MEDICAL_CONDITION_EFFECTS[type as MedicalConditionType];
@@ -67,6 +82,7 @@ function generateTraumaScenario(seed: string | undefined, rng: Rng): ScenarioPac
 
   const patient = {
     type: patientRoll.value.type,
+    age: estimateAge(patientRoll.value.type, rng),
     cooperation: patientRoll.value.cooperation,
     notes: patientRoll.value.notes,
     roll: patientRoll.roll,
@@ -113,6 +129,7 @@ function generateTraumaScenario(seed: string | undefined, rng: Rng): ScenarioPac
     hazards: [{ name: hazardRoll.value.name, notes: hazardRoll.value.notes, roll: hazardRoll.roll }],
     patient: {
       type: patientRoll.value.type,
+      age: estimateAge(patientRoll.value.type, rng),
       cooperation: patientRoll.value.cooperation,
       notes: patientRoll.value.notes,
       roll: patientRoll.roll,
@@ -167,6 +184,7 @@ function generateMedicalScenario(seed: string | undefined, rng: Rng): ScenarioPa
 
   const patient = {
     type: patientRoll.value.type,
+    age: estimateAge(patientRoll.value.type, rng),
     cooperation: patientRoll.value.cooperation,
     notes: patientRoll.value.notes,
     roll: patientRoll.roll,

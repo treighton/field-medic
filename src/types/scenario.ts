@@ -36,6 +36,7 @@ export type WildernessVitals = {
   skin: Skin;
   lor: LevelOfResponsiveness;
   coreTemp?: CoreTemp | null;
+  bloodGlucose?: number | null; // mg/dL, optional (not always measured)
 };
 
 export type VitalsTimepoint = {
@@ -59,6 +60,7 @@ export type Hazard = {
 
 export type PatientProfile = {
   type: string;
+  age: number; // years
   cooperation: "cooperative" | "anxious" | "altered" | "minimizes symptoms";
   notes?: string[];
   roll: DiceRoll;

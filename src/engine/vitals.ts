@@ -14,6 +14,7 @@ export function baselineAdultVitals(): WildernessVitals {
     skin: "warm/dry",
     lor: "A&Ox4",
     coreTemp: { kind: "unavailable", reason: "Not measured / not available in field" } as CoreTemp,
+    bloodGlucose: 100, // normal fasting glucose
   };
 }
 

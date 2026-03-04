@@ -2,14 +2,6 @@ import type { ScenarioPacket, VitalsTimepoint, EscalationTrigger, Injury } from 
 import { Card } from "./Card";
 import { formatBP } from "../engine/vitals";
 
-function formatDate(iso: string) {
-  try {
-    return new Date(iso).toLocaleString();
-  } catch {
-    return iso;
-  }
-}
-
 function groupBySeverity(triggers: EscalationTrigger[]) {
   const groups: Record<string, EscalationTrigger[]> = { high: [], medium: [], low: [] };
   for (const t of triggers) groups[t.severity].push(t);
@@ -28,6 +20,7 @@ function VitalsTable({ timeline }: { timeline: VitalsTimepoint[] }) {
           <th>Pupils</th>
           <th>Skin</th>
           <th>LOR</th>
+          <th>Glucose</th>
           <th>Core Temp</th>
         </tr>
       </thead>
@@ -41,6 +34,11 @@ function VitalsTable({ timeline }: { timeline: VitalsTimepoint[] }) {
             <td>{tp.vitals.pupils}</td>
             <td>{tp.vitals.skin}</td>
             <td>{tp.vitals.lor}</td>
+            <td>
+              {tp.vitals.bloodGlucose !== null && tp.vitals.bloodGlucose !== undefined
+                ? `${tp.vitals.bloodGlucose} mg/dL`
+                : "—"}
+            </td>
             <td>
               {tp.vitals.coreTemp
                 ? tp.vitals.coreTemp.kind === "unavailable"
@@ -119,7 +117,9 @@ export function ScenarioView({ packet }: { packet: ScenarioPacket }) {
       </div>
 
       <Card title="Patient">
-        <p><strong>{packet.patient.type}</strong> — {packet.patient.cooperation}</p>
+        <p>
+          <strong>{packet.patient.type}</strong> — age {packet.patient.age} — {packet.patient.cooperation}
+        </p>
         {packet.patient.notes?.length ? (
           <>
             <div className="label">Notes</div>
@@ -142,22 +142,24 @@ export function ScenarioView({ packet }: { packet: ScenarioPacket }) {
       </Card>
 
 
-      <Card title="Mechanism of Injury (MOI) + Hidden Injury Count">
-        <p><strong>{packet.moi.label}</strong></p>
-        <p className="muted">
+      <Card title={packet.meta.scenarioType === "trauma" ? "Mechanism of Injury (MOI)" : "Nature of Illness (NOI)"}>
+        <p><strong>Location: {packet.moi.label}</strong></p>
+        <p>
           <strong>Details:</strong> {packet.moi.details.narrative}
         </p>
-        <div className="chiprow">
-          {packet.moi.details.heightFt ? <span className="chip">Height: {packet.moi.details.heightFt} ft</span> : null}
-          {packet.moi.details.speedMph ? <span className="chip">Speed: ~{packet.moi.details.speedMph} mph</span> : null}
-          <span className="chip">Surface: {packet.moi.details.surface}</span>
-          <span className="chip">Landing: {packet.moi.details.landing}</span>
-          <span className="chip">Energy: {packet.moi.details.energy}</span>
-          {packet.moi.details.protectiveGear?.helmet !== undefined ? (
-            <span className="chip">Helmet: {packet.moi.details.protectiveGear.helmet ? "yes" : "no"}</span>
-          ) : null}
-          <span className="chip">{packet.moi.details.witnessed ? "Witnessed" : "Unwitnessed"}</span>
-        </div>
+        {packet.meta.scenarioType === "trauma" && (
+          <div className="chiprow">
+            {packet.moi.details.heightFt ? <span className="chip">Height: {packet.moi.details.heightFt} ft</span> : null}
+            {packet.moi.details.speedMph ? <span className="chip">Speed: ~{packet.moi.details.speedMph} mph</span> : null}
+            <span className="chip">Surface: {packet.moi.details.surface}</span>
+            <span className="chip">Landing: {packet.moi.details.landing}</span>
+            <span className="chip">Energy: {packet.moi.details.energy}</span>
+            {packet.moi.details.protectiveGear?.helmet !== undefined ? (
+              <span className="chip">Helmet: {packet.moi.details.protectiveGear.helmet ? "yes" : "no"}</span>
+            ) : null}
+            <span className="chip">{packet.moi.details.witnessed ? "Witnessed" : "Unwitnessed"}</span>
+          </div>
+        )}
       </Card>
 
       <Card title="Hidden Injuries">

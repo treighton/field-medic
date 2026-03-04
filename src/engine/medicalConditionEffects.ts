@@ -8,6 +8,7 @@ export type VitalsDelta = Partial<{
   pupils: WildernessVitals["pupils"];
   skin: WildernessVitals["skin"];
   lor: WildernessVitals["lor"];
+  bloodGlucose: number;
 }>;
 
 export type MedicalConditionEffect = {
@@ -90,9 +91,9 @@ export const MEDICAL_CONDITION_EFFECTS: Record<MedicalConditionType, MedicalCond
       "Monitor vitals; plan evacuation",
     ],
     deltasByMinutes: {
-      10: { hr: +8, rr: +2, skin: "diaphoretic", lor: "anxious" },
-      20: { hr: +16, rr: +4, bpSystolic: -10, skin: "cool/clammy", lor: "confused" },
-      30: { hr: +24, rr: +6, bpSystolic: -20, skin: "mottled", lor: "lethargic" },
+      10: { hr: +8, rr: +2, skin: "diaphoretic", lor: "anxious", bloodGlucose: +15 },
+      20: { hr: +16, rr: +4, bpSystolic: -10, skin: "cool/clammy", lor: "confused", bloodGlucose: +30 },
+      30: { hr: +24, rr: +6, bpSystolic: -20, skin: "mottled", lor: "lethargic", bloodGlucose: +45 },
     },
     triggers: [
       t("medium", "Progressive shock", "If fluids are unavailable or vital decline continues", "Hypotension deepens; altered mental status worsens", "20+ min"),
@@ -114,9 +115,9 @@ export const MEDICAL_CONDITION_EFFECTS: Record<MedicalConditionType, MedicalCond
       "Monitor mental status; plan evacuation",
     ],
     deltasByMinutes: {
-      10: { hr: +10, rr: +2, skin: "diaphoretic", lor: "confused" },
-      20: { hr: +14, rr: +6, skin: "cool/clammy", lor: "lethargic" },
-      30: { hr: +18, rr: +10, lor: "unresponsive" },
+      10: { hr: +10, rr: +2, skin: "diaphoretic", lor: "confused", bloodGlucose: -20 },
+      20: { hr: +14, rr: +6, skin: "cool/clammy", lor: "lethargic", bloodGlucose: -40 },
+      30: { hr: +18, rr: +10, lor: "unresponsive", bloodGlucose: -60 },
     },
     triggers: [
       t("high", "Unresponsiveness", "If mental status continues to decline", "Seizure or coma risk; advanced airway considerations", "10+ min"),
