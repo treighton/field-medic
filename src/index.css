@@ -249,3 +249,75 @@ button:hover { border-color: rgba(239,68,68,0.35); }
 @media print {
   .chip { border-color: #ddd; color: #444; background: #fff; }
 }
+
+/* Empty / loading states */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 80px 24px;
+  text-align: center;
+}
+.empty-state__title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+.loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* API Key modal */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal {
+  width: 90%;
+  max-width: 480px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+}
+.modal__title { margin: 0 0 8px; font-size: 16px; }
+.modal__input {
+  width: 100%;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,0.25);
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+}
+.modal__input:focus { border-color: var(--accent); }
+.modal__actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+/* Narrative */
+button:disabled { opacity: 0.55; cursor: not-allowed; }
+.narrative-opener { font-style: italic; line-height: 1.6; }
+.narrative-error {
+  padding: 10px 14px;
+  background: rgba(239,68,68,0.12);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  color: #fca5a5;
+  font-size: 13px;
+}

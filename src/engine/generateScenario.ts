@@ -1,5 +1,8 @@
 import type { ScenarioPacket, Injury, TraumaInjuryType, MedicalConditionType, GradingHints } from "../types/scenario";
 import { mulberry32, seedToNumber, type Rng } from "./dice";
+import { callClaude, extractJson, LLMError } from "./llm";
+import { buildScenarioSystemPrompt } from "./llmScenarioPrompt";
+import { validateScenarioPacket } from "./validateScenarioPacket";
 import { rollSetting, rollHazard, rollPatient, rollMOI, rollMoiDetails } from "./tables";
 import { rollHiddenInjuryCount } from "./injuryCount";
 import { INJURY_EFFECTS } from "./injuryEffects";
@@ -267,4 +270,40 @@ function generateMedicalScenario(seed: string | undefined, rng: Rng): ScenarioPa
     gradingHints,
     emtExtras: undefined,
   };
+}
+
+export async function generateScenarioWithLLM(
+  opts: { scenarioType?: "trauma" | "medical"; environment?: "wilderness" | "urban"; apiKey: string }
+): Promise<ScenarioPacket> {
+  const scenarioType = opts.scenarioType ?? "trauma";
+  const environment = opts.environment ?? "wilderness";
+  const systemPrompt = buildScenarioSystemPrompt(scenarioType, environment);
+  const userContent = `Generate a ${scenarioType} scenario now.`;
+
+  let raw: string;
+  try {
+    raw = await callClaude(systemPrompt, userContent, opts.apiKey);
+  } catch (err) {
+    throw new LLMError(`API call failed: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  let jsonStr: string;
+  try {
+    jsonStr = extractJson(raw);
+  } catch {
+    throw new LLMError("No JSON found in LLM response");
+  }
+
+  // Strip `undefined` values — not valid JSON but LLMs emit them anyway
+  const sanitized = jsonStr.replace(/:\s*undefined/g, ": null");
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(sanitized);
+  } catch {
+    throw new LLMError("Failed to parse JSON from LLM response");
+  }
+
+  // Validate — throws LLMError with details if invalid
+  return validateScenarioPacket(parsed);
 }

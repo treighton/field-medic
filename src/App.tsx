@@ -1,76 +1,64 @@
 import { useState } from "react";
-import { generateScenarioPacket } from "./engine/generateScenario";
+import { generateScenarioWithLLM } from "./engine/generateScenario";
 import type { ScenarioPacket } from "./types/scenario";
 import { ScenarioView } from "./components/ScenarioView";
 import { LoadPacketModal } from "./components/LoadPacketModal";
+import { ApiKeyModal } from "./components/ApiKeyModal";
+import { NarrativeCard } from "./components/NarrativeCard";
+import { generateNarrative, type NarrativeExtras } from "./engine/generateNarrative";
 
-// function downloadJson(packet: ScenarioPacket) {
-//   const blob = new Blob([JSON.stringify(packet, null, 2)], { type: "application/json" });
-//   const url = URL.createObjectURL(blob);
-//   const a = document.createElement("a");
-//   a.href = url;
-//   a.download = `${packet.meta.id}.json`;
-//   document.body.appendChild(a);
-//   a.click();
-//   a.remove();
-//   URL.revokeObjectURL(url);
-// }
+const API_KEY_STORAGE_KEY = "field_medic_anthropic_key";
 
-function buildNarrativePrompt(packet: ScenarioPacket): string {
-  const lines = [
-    "You are generating narrative flavor for an EMT training scenario.",
-    "You will be given a JSON ScenarioPacket. That JSON is the source of truth.",
-    "",
-    "Return ONLY valid JSON file for download with this shape:",
-    "{",
-    '  "narrative": {',
-    '    "opener": string,',
-    '    "patientDialogue": string[],',
-    '    "bystanderDialogue": string[],',
-    '    "sensoryDetails": string[],',
-    '    "gmNotes": string[]',
-    "  }",
-    "}",
-    "",
-    "Hard constraints:",
-    "- DO NOT change MOI, injuries, vitals, timelines, expected actions, escalation logic, or end states.",
-    "- DO NOT invent new symptoms that imply injuries not present in hiddenInjuries.",
-    "- You may rephrase the chief complaint as dialogue, but must preserve meaning and reliability.",
-    "- If chiefComplaint.isMisdirecting is true, the patient's dialogue should minimize/redirect appropriately.",
-    "- Keep it wilderness-context appropriate and concise.",
-    "",
-    "ScenarioPacket JSON (source of truth):",
-    JSON.stringify(packet, null, 2),
-  ];
-  return lines.join("\n");
-}
-
-async function copyNarrativePrompt(packet: ScenarioPacket) {
-  const text = buildNarrativePrompt(packet);
-  try {
-    await navigator.clipboard.writeText(text);
-    alert("Copied narrative prompt to clipboard.");
-  } catch {
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand("copy");
-    ta.remove();
-    alert("Copied narrative prompt to clipboard.");
-  }
-}
 
 export default function App() {
   const [scenarioType, setScenarioType] = useState<"trauma" | "medical">("trauma");
-  const [packet, setPacket] = useState<ScenarioPacket>(() => generateScenarioPacket({ scenarioType }));
+  const [environment, setEnvironment] = useState<"wilderness" | "urban">("wilderness");
+  const [packet, setPacket] = useState<ScenarioPacket | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState<"scenario" | "narrative" | null>(null);
+  const [scenarioError, setScenarioError] = useState<string | null>(null);
   const [isLoadModalOpen, setIsLoadModalOpen] = useState(false);
+  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem(API_KEY_STORAGE_KEY) ?? "");
+  const [narrative, setNarrative] = useState<NarrativeExtras | null>(null);
 
-  const onGenerate = () => {
-    const next = generateScenarioPacket({
-      scenarioType,
-    });
-    setPacket(next);
+  const onGenerate = async () => {
+    if (!apiKey) {
+      setIsApiKeyModalOpen(true);
+      return;
+    }
+    setLoading(true);
+    setScenarioError(null);
+    setNarrative(null);
+    setPacket(null);
+
+    let next: ScenarioPacket;
+    try {
+      setLoadingStep("scenario");
+      next = await generateScenarioWithLLM({ scenarioType, environment, apiKey });
+      setPacket(next);
+    } catch (err) {
+      setScenarioError(err instanceof Error ? err.message : "Unknown error generating scenario.");
+      setLoading(false);
+      setLoadingStep(null);
+      return;
+    }
+
+    try {
+      setLoadingStep("narrative");
+      const result = await generateNarrative(next, apiKey, environment);
+      setNarrative(result);
+    } catch {
+      // Narrative failure is non-fatal — show the packet without it
+    } finally {
+      setLoading(false);
+      setLoadingStep(null);
+    }
+  };
+
+  const onSaveApiKey = (key: string) => {
+    setApiKey(key);
+    localStorage.setItem(API_KEY_STORAGE_KEY, key);
   };
 
   return (
@@ -84,35 +72,49 @@ export default function App() {
         <div className="topbar__controls">
           <label className="control">
             <span>Scenario Type</span>
-            <select value={scenarioType} onChange={(e) => {
-              setScenarioType(e.target.value as "trauma" | "medical");
-              const next = generateScenarioPacket({
-                scenarioType: e.target.value as "trauma" | "medical"
-              });
-              setPacket(next);
-            }}>
+            <select value={scenarioType} onChange={(e) => setScenarioType(e.target.value as "trauma" | "medical")} disabled={loading}>
               <option value="trauma">Trauma</option>
               <option value="medical">Medical</option>
             </select>
           </label>
           <label className="control">
-            {/* <span>Seed (optional)</span>
-            <input
-              value={seed}
-              onChange={(e) => setSeed(e.target.value)}
-              placeholder="e.g. 1234 or 'pelvic'"
-            /> */}
+            <span>Environment</span>
+            <select value={environment} onChange={(e) => setEnvironment(e.target.value as "wilderness" | "urban")} disabled={loading}>
+              <option value="wilderness">Wilderness</option>
+              <option value="urban">Urban / EMT</option>
+            </select>
           </label>
-          <button onClick={onGenerate}>Generate Scenario</button>
-          <button onClick={() => setIsLoadModalOpen(true)}>Load Packet</button>
-          {/* <button onClick={() => downloadJson(packet)}>Export JSON</button> */}
-          <button onClick={() => copyNarrativePrompt(packet)}>Copy LLM Prompt</button>
-          <button onClick={() => window.print()}>Print</button>
+          <button onClick={onGenerate} disabled={loading}>
+            {loading ? (loadingStep === "narrative" ? "Adding narrative…" : "Generating…") : "Generate"}
+          </button>
+          <button onClick={() => setIsLoadModalOpen(true)} disabled={loading}>Load Packet</button>
+          <button onClick={() => setIsApiKeyModalOpen(true)} title="Set Anthropic API key">
+            {apiKey ? "API Key ✓" : "Set API Key"}
+          </button>
+          <button onClick={() => window.print()} disabled={!packet || loading}>Print</button>
         </div>
       </header>
 
       <main className="content">
-        <ScenarioView packet={packet} />
+        {scenarioError && (
+          <p className="narrative-error">Error: {scenarioError}</p>
+        )}
+        {loading ? (
+          <div className="empty-state">
+            <div className="loading-spinner" />
+            <p>{loadingStep === "narrative" ? "Adding narrative flavor…" : "AI is generating your scenario…"}</p>
+          </div>
+        ) : !packet ? (
+          <div className="empty-state">
+            <p className="empty-state__title">No scenario loaded</p>
+            <p className="muted">Select a scenario type and environment, then click Generate.</p>
+          </div>
+        ) : (
+          <>
+            {narrative && <NarrativeCard narrative={narrative} />}
+            <ScenarioView packet={packet} />
+          </>
+        )}
       </main>
 
       <LoadPacketModal
@@ -122,6 +124,13 @@ export default function App() {
           setIsLoadModalOpen(false);
         }}
         onClose={() => setIsLoadModalOpen(false)}
+      />
+
+      <ApiKeyModal
+        isOpen={isApiKeyModalOpen}
+        currentKey={apiKey}
+        onSave={onSaveApiKey}
+        onClose={() => setIsApiKeyModalOpen(false)}
       />
 
       <footer className="footer no-print">
